@@ -1,0 +1,4 @@
+roscore
+roslaunch ros_tcp_endpoint endpoint.launch
+rosrun image_pub image_publisher.py
+rosrun iiwa_pose_control iiwa_pose_control.py
