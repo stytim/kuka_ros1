@@ -2,16 +2,19 @@
 
 import rospy
 from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import String
+from std_msgs.msg import String, Time, Bool
 from iiwa_msgs.msg import CartesianPose, DesiredForceControlMode
 from iiwa_msgs.srv import ConfigureControlMode,ConfigureControlModeRequest, ConfigureControlModeResponse
 import sys
 import select
 import termios
 import tty
+import copy
 
-stored_pose = None
+stored_pose1 = None
+stored_pose2 = None
 current_pose = None
+destination_reached = False
 
 def get_key():
     tty.setraw(sys.stdin.fileno())
@@ -24,6 +27,13 @@ def pose_callback(msg):
     global current_pose
     current_pose = msg.poseStamped
 
+def destination_reached_callback(msg):
+    global destination_reached
+    destination_reached = True
+
+def start_signal_callback(msg):
+    if msg.data:
+        execute_movement_sequence(pose_pub)
 
 def set_desired_force():
     rospy.wait_for_service('/iiwa/configuration/ConfigureControlMode')
@@ -67,34 +77,60 @@ def set_position_control():
     except rospy.ServiceException as e:
         rospy.logerr(f"Service call failed: {e}")
 
+def move_to_pose(pose_pub, pose):
+    global destination_reached
+    destination_reached = False
+    pose_pub.publish(pose)
+    rospy.loginfo("Moving to pose.")
+    while not destination_reached:
+        rospy.sleep(0.5)
+    rospy.loginfo("Reached pose.")
+
+def execute_movement_sequence(pose_pub):
+    set_desired_force()
+    rospy.sleep(0.5)
+    if stored_pose1 and stored_pose2:
+        move_to_pose(pose_pub, stored_pose1)
+        move_to_pose(pose_pub, stored_pose2)
+        # Move 0.1m up in the z direction
+
+        # Create a new PoseStamped message with the final pose, copy data from pose2
+        final_pose = copy.deepcopy(stored_pose2)
+        final_pose.pose.position.z += 0.1
+        rospy.loginfo("Final pose: x={}, y={}, z={}".format(final_pose.pose.position.x, final_pose.pose.position.y, final_pose.pose.position.z))
+
+        move_to_pose(pose_pub, final_pose)
+    else:
+        rospy.logwarn("Both poses must be stored before moving.")
+
 def main():
-    global settings, stored_pose, current_pose
+    global settings, stored_pose1, stored_pose2, current_pose, destination_reached, pose_pub
     settings = termios.tcgetattr(sys.stdin)
 
     rospy.init_node('iiwa_pose_control', anonymous=True)
     rospy.Subscriber('/iiwa/state/CartesianPose', CartesianPose, pose_callback)
+    rospy.Subscriber('/iiwa/state/DestinationReached', Time, destination_reached_callback)
+    rospy.Subscriber('/start_signal', Bool, start_signal_callback)
     pose_pub = rospy.Publisher('/iiwa/command/CartesianPoseLin', PoseStamped, queue_size=10)
-
-    set_desired_force()
 
     rospy.loginfo("Press 's' to store the current pose. Press 'm' to publish the stored pose. 'q' to quit.")
 
-    rate = rospy.Rate(10)  # 10 Hz
+    rate = rospy.Rate(30)  # 30 Hz
     while not rospy.is_shutdown():
         key = get_key()
         if key == 's':
-            if current_pose:
-                stored_pose = current_pose
-                rospy.loginfo("Pose stored.")
+            if not stored_pose1 and current_pose:
+                stored_pose1 = current_pose
+                rospy.loginfo("First pose stored.")
+                rospy.loginfo("Pose: x={}, y={}, z={}".format(stored_pose1.pose.position.x, stored_pose1.pose.position.y, stored_pose1.pose.position.z))
+            elif not stored_pose2 and current_pose:
+                stored_pose2 = current_pose
+                rospy.loginfo("Second pose stored.")
+                rospy.loginfo("Pose: x={}, y={}, z={}".format(stored_pose2.pose.position.x, stored_pose2.pose.position.y, stored_pose2.pose.position.z))
             else:
-                rospy.logwarn("No pose available to store.")
+                rospy.logwarn("Both poses are already stored.")
         elif key == 'm':
-            if stored_pose:
-                set_desired_force()
-                pose_pub.publish(stored_pose)
-                rospy.loginfo("Stored pose published.")
-            else:
-                rospy.logwarn("No pose stored to publish.")
+            execute_movement_sequence(pose_pub)
         elif key == 'q':
             rospy.loginfo("Quitting program.")
             break

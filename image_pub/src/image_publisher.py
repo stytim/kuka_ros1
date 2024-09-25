@@ -24,7 +24,7 @@ def main():
     image_pub = rospy.Publisher('/ultrasound_image/compressed', CompressedImage, queue_size=1)
     bridge = CvBridge()
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(2)
 
     if not cap.isOpened():
         rospy.logerr("Cannot open image stream")

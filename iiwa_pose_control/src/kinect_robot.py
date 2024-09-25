@@ -80,9 +80,9 @@ class BodyTrackingTransformer:
             static_transform_stamped.header.frame_id = self.tag_frame_id
             static_transform_stamped.child_frame_id = self.robot_base_frame_id
 
-            static_transform_stamped.transform.translation.x = 0.195
-            static_transform_stamped.transform.translation.y = 0.13
-            static_transform_stamped.transform.translation.z = 0
+            static_transform_stamped.transform.translation.x = 0.25
+            static_transform_stamped.transform.translation.y = 0.10
+            static_transform_stamped.transform.translation.z = 0.002
             static_transform_stamped.transform.rotation.x = 0
             static_transform_stamped.transform.rotation.y = 0
             static_transform_stamped.transform.rotation.z = 1
