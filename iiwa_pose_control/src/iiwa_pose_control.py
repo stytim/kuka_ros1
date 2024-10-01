@@ -94,11 +94,13 @@ def execute_movement_sequence(pose_pub):
         move_to_pose(pose_pub, stored_pose2)
         # Move 0.1m up in the z direction
 
+        rospy.loginfo("Moving to Final Pose.")
+
         # Create a new PoseStamped message with the final pose, copy data from pose2
         final_pose = copy.deepcopy(stored_pose2)
-        final_pose.pose.position.z += 0.1
+        final_pose.pose.position.z += 0.15
         rospy.loginfo("Final pose: x={}, y={}, z={}".format(final_pose.pose.position.x, final_pose.pose.position.y, final_pose.pose.position.z))
-
+        #final_pose = 3
         move_to_pose(pose_pub, final_pose)
         reached_pub.publish(Bool(data=True))
     else:
@@ -127,7 +129,7 @@ def main():
                 rospy.loginfo("First pose stored.")
                 #rospy.loginfo("Pose: x={}, y={}, z={}".format(stored_pose1.pose.position.x, stored_pose1.pose.position.y, stored_pose1.pose.position.z))
                 stored_pose_pub.publish(String(data="First"))  # Publish signal for first pose
-            elif not stored_pose2: #and current_pose:
+            elif not stored_pose2 and current_pose:
                 stored_pose2 = current_pose
                 rospy.loginfo("Second pose stored.")
                 #rospy.loginfo("Pose: x={}, y={}, z={}".format(stored_pose2.pose.position.x, stored_pose2.pose.position.y, stored_pose2.pose.position.z))
