@@ -100,11 +100,12 @@ def execute_movement_sequence(pose_pub):
         rospy.loginfo("Final pose: x={}, y={}, z={}".format(final_pose.pose.position.x, final_pose.pose.position.y, final_pose.pose.position.z))
 
         move_to_pose(pose_pub, final_pose)
+        reached_pub.publish(Bool(data=True))
     else:
         rospy.logwarn("Both poses must be stored before moving.")
 
 def main():
-    global settings, stored_pose1, stored_pose2, current_pose, destination_reached, pose_pub
+    global settings, stored_pose1, stored_pose2, current_pose, destination_reached, pose_pub, stored_pose_pub, reached_pub
     settings = termios.tcgetattr(sys.stdin)
 
     rospy.init_node('iiwa_pose_control', anonymous=True)
@@ -112,6 +113,8 @@ def main():
     rospy.Subscriber('/iiwa/state/DestinationReached', Time, destination_reached_callback)
     rospy.Subscriber('/start_signal', Bool, start_signal_callback)
     pose_pub = rospy.Publisher('/iiwa/command/CartesianPoseLin', PoseStamped, queue_size=10)
+    stored_pose_pub = rospy.Publisher('/pose_storage_signal', String, queue_size=10)  # Publisher for pose storage signal
+    reached_pub = rospy.Publisher('/final_pose_reached', Bool, queue_size=10)  # Publisher for final pose reached signal
 
     rospy.loginfo("Press 's' to store the current pose. Press 'm' to publish the stored pose. 'q' to quit.")
 
@@ -122,11 +125,13 @@ def main():
             if not stored_pose1 and current_pose:
                 stored_pose1 = current_pose
                 rospy.loginfo("First pose stored.")
-                rospy.loginfo("Pose: x={}, y={}, z={}".format(stored_pose1.pose.position.x, stored_pose1.pose.position.y, stored_pose1.pose.position.z))
-            elif not stored_pose2 and current_pose:
+                #rospy.loginfo("Pose: x={}, y={}, z={}".format(stored_pose1.pose.position.x, stored_pose1.pose.position.y, stored_pose1.pose.position.z))
+                stored_pose_pub.publish(String(data="First"))  # Publish signal for first pose
+            elif not stored_pose2: #and current_pose:
                 stored_pose2 = current_pose
                 rospy.loginfo("Second pose stored.")
-                rospy.loginfo("Pose: x={}, y={}, z={}".format(stored_pose2.pose.position.x, stored_pose2.pose.position.y, stored_pose2.pose.position.z))
+                #rospy.loginfo("Pose: x={}, y={}, z={}".format(stored_pose2.pose.position.x, stored_pose2.pose.position.y, stored_pose2.pose.position.z))
+                stored_pose_pub.publish(String(data="Second"))  # Publish signal for second pose
             else:
                 rospy.logwarn("Both poses are already stored.")
         elif key == 'm':
