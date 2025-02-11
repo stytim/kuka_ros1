@@ -12,7 +12,6 @@ find_package(catkin REQUIRED COMPONENTS
   visualization_msgs
   iiwa_msgs
   iiwa_ros
-  apriltag_ros
   rospy
   std_msgs
 )
