@@ -1,0 +1,28 @@
+<?xml version="1.0" ?>
+<launch>
+    <!-- Realsense initialization -->
+    <include file="$(find realsense2_camera)/launch/rs_rgbd_llm.launch" >
+        <arg name="color_width" value="640" />
+        <arg name="color_height" value="480"/>
+        <arg name="depth_width" value="640" />
+        <arg name="depth_height" value="480"/>
+        <!-- <arg name="color_width" value="1280" />
+        <arg name="color_height" value="720"/> -->
+        <arg name="color_fps" value="15"/> <!-- Add this line for making the resolution works. -->
+        <arg name="depth_fps" value="15"/> <!-- Add this line for making the resolution works. -->
+    </include>
+
+    <!-- Control panel node -->
+    <node name="iiwa_realsense_node" pkg="iiwa_pose_control" type="iiwa_realsense.py" output="screen" required="true" />
+
+    <!-- The transformation from camera_frame to end-effector -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_to_ee" 
+          args="0.030359  0.130153 -0.039355 -0.000723 -0.006191 -0.999975  0.003434 iiwa_link_ee camera_color_optical_frame" />
+    
+    <!-- The transformation from probe_center to end-effector -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="probe_to_ee" 
+          args="0.0  0.0 0.1965 0.0 0.0 0.0  1 iiwa_link_ee probe" />
+
+    <node name="command_node" pkg="iiwa_pose_control" type="command.py" output="screen" required="true" />      
+    
+</launch>

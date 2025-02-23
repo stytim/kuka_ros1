@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# scrcpy --v4l2-sink=/dev/video0 -d --no-video-playback -m2000 --crop 835:800:150:600
 
 import rospy
 import cv2
@@ -24,7 +25,7 @@ def main():
     image_pub = rospy.Publisher('/ultrasound_image/compressed', CompressedImage, queue_size=1)
     bridge = CvBridge()
 
-    cap = cv2.VideoCapture(2)
+    cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
         rospy.logerr("Cannot open image stream")
