@@ -21,7 +21,7 @@ import sys
 import rospy
 from geometry_msgs.msg import PoseStamped, PoseArray, Pose
 from sensor_msgs.msg import Image
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Time
 
 # robot
 from iiwa_msgs.msg import CartesianPose
@@ -364,25 +364,79 @@ class CommandUI(QWidget):
         super().__init__()
         self.init_ui()
         self.is_gen = False
+        self.is_select = False
+        self.is_move = False
+        self.is_reduce = False
+        self.is_pause = False
+        self.is_resume= False
+        self.is_reset= False
 
     def init_ui(self):
         self.setWindowTitle('iiwa_realsense!')
-        self.setGeometry(100, 100, 300, 150)
+        self.setGeometry(100, 100, 300, 250)
 
         layout = QVBoxLayout()
         
         self.label = QLabel('Welcome to use iiwa realsense!', self)
         layout.addWidget(self.label)
 
-        self.send_button = QPushButton('Generate path', self)
-        self.send_button.clicked.connect(self.generate)
-        layout.addWidget(self.send_button)
+        self.select_button = QPushButton('Select', self)
+        self.select_button.clicked.connect(self.select_action)
+        layout.addWidget(self.select_button)
+
+        self.generate_button = QPushButton('Generate path', self)
+        self.generate_button.clicked.connect(self.generate)
+        layout.addWidget(self.generate_button)
+
+        self.move_button = QPushButton('Move', self)
+        self.move_button.clicked.connect(self.move_action)
+        layout.addWidget(self.move_button)
+
+        self.reduce_button = QPushButton('Reduce', self)
+        self.reduce_button.clicked.connect(self.reduce_action)
+        layout.addWidget(self.reduce_button)
+
+        self.pause_button = QPushButton('Pause', self)
+        self.pause_button.clicked.connect(self.pause_action)
+        layout.addWidget(self.pause_button)
+
+        self.resume_button = QPushButton('Resume', self)
+        self.resume_button.clicked.connect(self.resume_action)
+        layout.addWidget(self.resume_button)
+
+        self.reset_button = QPushButton('Reset', self)
+        self.reset_button.clicked.connect(self.reset_action)
+        layout.addWidget(self.reset_button)
         
         self.setLayout(layout)
 
     def generate(self):
-        print("push")
+        print("generate")
         self.is_gen = True
+
+    def select_action(self):
+        print("select")
+        self.is_select = True
+
+    def move_action(self):
+        print("move")
+        self.is_move = True
+
+    def reduce_action(self):
+        print("reduce")
+        self.is_reduce = True
+
+    def pause_action(self):
+        print("pause")
+        self.is_pause = True
+
+    def resume_action(self):
+        print("resume")
+        self.is_resume = True
+
+    def reset_action(self):
+        print("reset")
+        self.is_reset = True
 
 class ControlPanel(object):
     def __init__(self,
@@ -394,7 +448,8 @@ class ControlPanel(object):
                  depth_img_topic='/camera/aligned_depth_to_color/image_raw',
                  robot_topic='/iiwa/state/CartesianPose',
                  iiwa_lin_pub_topic='/iiwa/command/CartesianPoseLin',
-                 rob_command_topic='/robot_command'
+                 rob_command_topic='/robot_command',
+                 pose_pub_unity_topic='/points_pose_array',
                  ):
         super(ControlPanel, self).__init__()
         rospy.init_node('iiwa_realsense_node', anonymous=True)
@@ -410,6 +465,7 @@ class ControlPanel(object):
         self.control_service = control_service
 
         self.iiwa_lin_pose_pub = rospy.Publisher(iiwa_lin_pub_topic, PoseStamped, queue_size=10)
+        self.poses_pub_unity = rospy.Publisher(pose_pub_unity_topic, PoseArray, queue_size=10)
 
         self.probe_path = probe_path
         self.probe_to_ee = self.compute.get_coordinate(project_path + probe_path)
@@ -422,7 +478,16 @@ class ControlPanel(object):
         self.command_str = None
         self.robot_pose = None
         self.robot_pose_7d = []
+        self.points_quat_unity = []
         self.init_pose = np.array([0.5, 0.0, 0.6, 0.7071068, 0.7071068, 0.0, 0.0])
+
+        self.ui.generate_button.clicked.connect(self.generate_path)
+        self.ui.select_button.clicked.connect(self.select_point)
+        self.ui.move_button.clicked.connect(self.start_moving)
+        self.ui.reduce_button.clicked.connect(self.reduce_pressure)
+        self.ui.pause_button.clicked.connect(self.pause_robot)
+        self.ui.resume_button.clicked.connect(self.resume_robot)
+        self.ui.reset_button.clicked.connect(self.reset_robot)
         
         try:
             rospy.Subscriber(robot_topic, CartesianPose, self.rob_callback)
@@ -448,7 +513,15 @@ class ControlPanel(object):
         try:
             rospy.Subscriber(rob_command_topic, String, self.rob_command_callback)
         except rospy.exceptions.ROSException as e:
-            print("There is no ultrasound image topic. Please check it.") 
+            print("There is no rob commandtopic. Please check it.") 
+
+        ## Subscribe iiwa
+        self.destination_reached = False
+        try:
+            rospy.Subscriber('/iiwa/state/DestinationReached', Time, self.destination_reached_callback)
+        except rospy.exceptions.ROSException as e:
+            print("There is no destination topic. Please check it.") 
+        
 
         self.command_timer = QTimer()
         self.command_timer.timeout.connect(self.auto_execuate_command)
@@ -458,9 +531,9 @@ class ControlPanel(object):
         self.trajectory_timer.timeout.connect(self.motion)
         self.trajectory_timer.start(500)
 
-        self.generate_timer = QTimer()
-        self.generate_timer.timeout.connect(self.generate_path)
-        self.generate_timer.start(10)
+        # self.generate_timer = QTimer()
+        # self.generate_timer.timeout.connect(self.generate_path)
+        # self.generate_timer.start(10)
     
     def generate_path(self):
         if not self.ui.is_gen:
@@ -468,9 +541,67 @@ class ControlPanel(object):
         self.execute_command('generate')
         self.ui.is_gen = False
 
+    def select_point(self):
+        if not self.ui.is_select:
+            return
+        self.execute_command('select')
+        self.ui.is_select = False
+
+    def start_moving(self):
+        if not self.ui.is_move:
+            return
+        self.execute_command('start')
+        self.ui.is_move = False        
+
+    def reduce_pressure(self):
+        if not self.ui.is_reduce:
+            return
+        self.execute_command('reduce')
+        self.ui.is_reduce = False
+
+    def pause_robot(self):
+        if not self.ui.is_pause:
+            return
+        self.execute_command('pause')
+        self.ui.is_pause = False
+
+    def resume_robot(self):
+        if not self.ui.is_resume:
+            return
+        self.execute_command('resume')
+        self.ui.is_resume = False
+
+    def reset_robot(self):
+        if not self.ui.is_reset:
+            return
+        self.execute_command('reset')
+        self.ui.is_reset = False
+
+    def pub_points_pose(self):
+        if len(self.points_quat) == 0:
+            return
+        pose_array_msg_unity = PoseArray()
+        pose_array_msg_unity.header.stamp = rospy.Time.now()
+        # pose_array_msg.header.frame_id = "world"
+        pose_array_msg_unity.header.frame_id = "camera_color_optical_frame"
+        for point_unity in self.points_quat_unity:
+            pose = Pose()
+            pose.position.x = point_unity[0]
+            pose.position.y = point_unity[1]
+            pose.position.z = point_unity[2]
+            pose.orientation.x = point_unity[3]
+            pose.orientation.y = point_unity[4]
+            pose.orientation.z = point_unity[5]
+            pose.orientation.w = point_unity[6]
+            pose_array_msg_unity.poses.append(pose)
+        self.poses_pub_unity.publish(pose_array_msg_unity)
+
     def rob_command_callback(self, ros_msg):
         self.command_str = ros_msg.data
         self.automated_command = True
+
+    def destination_reached_callback(self,msg):
+        self.destination_reached = True
 
     def onclick(self, event):
         if event.xdata is None or event.ydata is None:
@@ -545,7 +676,7 @@ class ControlPanel(object):
         if value == 'start':
             if len(self.points_quat) == 0:
                 return
-            self.move_probe_to_point(self.points_quat[0])
+            self.move_probe_to_point(self.points_quat[0], startend=True)
 
         elif value == 'trajectory':
             point_to_world = self.tf.quat_to_matrix(self.points_quat[0])
@@ -554,7 +685,7 @@ class ControlPanel(object):
             if np.sum(np.abs(self.robot_pose_7d[:3] - desired_pose_quat[:3])) > 0.1:
                 return
             
-            self.set_impedance_control(enable=True, is_impedance=True)
+            # self.set_impedance_control(enable=True, is_impedance=True)
             self.is_segmented = True
             self.movement(self.points_quat)
         
@@ -568,7 +699,7 @@ class ControlPanel(object):
                 points_array[:, 2] -= 0.001
                 self.points_running_queue = deque(points_array)
         
-        elif value == 'release':
+        elif value == 'reduce':
             if len(self.points_running_queue) == 0 or self.is_robot_stopped:
                 current_probe_pose = self.robot_pose_7d.copy()
                 current_probe_pose[2] += 0.015
@@ -597,6 +728,9 @@ class ControlPanel(object):
             self.desired_pose_mouse_quat = self.robot_pose_7d
 
         elif value == 'select':
+            self.points_selection = []
+            self.points_quat = []
+            self.points_quat_unity = []
             img = self.img.copy()
             self.init_parameters()
             fig, ax = plt.subplots()
@@ -609,7 +743,10 @@ class ControlPanel(object):
             self.end_scanning()
         
         elif value == 'generate':
+            self.points_quat = []
+            self.points_quat_unity = []
             self.gen_trajectory()
+            self.pub_points_pose()
             print("Points: \n", self.points_quat)
         
         elif value == 'none':
@@ -627,10 +764,13 @@ class ControlPanel(object):
             point_to_world = self.get_point_mat(point2d, idx)
 
             # Publish has the different coordinate system
+            point_to_world_publish = self.get_point_mat(point2d, idx, is_published=True)
             if len(point_to_world) == 0:
                 continue
             point_to_world_quat = self.tf.matrix_to_quat(point_to_world)
+            point_to_world_publish_quat = self.tf.matrix_to_quat(point_to_world_publish)
             self.points_quat.append(point_to_world_quat)
+            self.points_quat_unity.append(point_to_world_publish_quat)
             idx += 1
     
     def movement(self, point_list, is_trajectory=True):
@@ -703,7 +843,7 @@ class ControlPanel(object):
 
         return point3d, point_rot
         
-    def move_probe_to_point(self, point_to_world_quat):
+    def move_probe_to_point(self, point_to_world_quat, startend = False):
         point_to_world = self.tf.quat_to_matrix(point_to_world_quat)
         desired_pose = point_to_world @ np.linalg.inv(self.probe_to_ee)
         
@@ -711,7 +851,7 @@ class ControlPanel(object):
         desired_pose_show = np.round(desired_pose_show, decimals=2)
         transform_quat = self.tf.matrix_to_quat(desired_pose)
 
-        self.move_to_cartesian_pose(transform_quat)
+        self.move_to_cartesian_pose(transform_quat, startend)
     
     #### ros function
     def rob_callback(self, ros_msg):
@@ -733,7 +873,7 @@ class ControlPanel(object):
         self.depth_img = depth_img
         self.depth_queue.append(depth_img)
     
-    def move_to_cartesian_pose(self, desired_pose):
+    def move_to_cartesian_pose(self, desired_pose, startend = False):
         posemsg = PoseStamped()
         posemsg.header.frame_id = "iiwa_link_0"
 
@@ -745,7 +885,15 @@ class ControlPanel(object):
         posemsg.pose.orientation.z = desired_pose[5]
         posemsg.pose.orientation.w = desired_pose[6]
 
+        self.destination_reached = False
         self.iiwa_lin_pose_pub.publish(posemsg)
+        if startend:
+            rospy.loginfo("Moving to pose.")
+            while not self.destination_reached:
+                rospy.sleep(0.5)
+            rospy.loginfo("Reached start point, continue scan.")
+            self.execute_command("trajectory")
+
      
     def init_parameters(self):
         self.points_selection = []

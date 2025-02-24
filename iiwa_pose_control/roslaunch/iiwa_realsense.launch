@@ -23,6 +23,6 @@
     <node pkg="tf2_ros" type="static_transform_publisher" name="probe_to_ee" 
           args="0.0  0.0 0.1965 0.0 0.0 0.0  1 iiwa_link_ee probe" />
 
-    <node name="command_node" pkg="iiwa_pose_control" type="command.py" output="screen" required="true" />      
+    <!-- <node name="command_node" pkg="iiwa_pose_control" type="command.py" output="screen" required="true" />       -->
     
 </launch>

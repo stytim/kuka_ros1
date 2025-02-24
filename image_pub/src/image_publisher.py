@@ -22,7 +22,7 @@ def main():
     settings = termios.tcgetattr(sys.stdin)
 
     rospy.init_node('image_publisher', anonymous=True)
-    image_pub = rospy.Publisher('/ultrasound_image/compressed', CompressedImage, queue_size=1)
+    image_pub = rospy.Publisher('/us_image/compressed', CompressedImage, queue_size=1)
     bridge = CvBridge()
 
     cap = cv2.VideoCapture(0)
