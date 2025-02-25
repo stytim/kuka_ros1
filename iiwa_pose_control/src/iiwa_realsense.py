@@ -450,6 +450,7 @@ class ControlPanel(object):
                  iiwa_lin_pub_topic='/iiwa/command/CartesianPoseLin',
                  rob_command_topic='/robot_command',
                  pose_pub_unity_topic='/points_pose_array',
+                 end_pub_topic='/robot/end'
                  ):
         super(ControlPanel, self).__init__()
         rospy.init_node('iiwa_realsense_node', anonymous=True)
@@ -466,6 +467,7 @@ class ControlPanel(object):
 
         self.iiwa_lin_pose_pub = rospy.Publisher(iiwa_lin_pub_topic, PoseStamped, queue_size=10)
         self.poses_pub_unity = rospy.Publisher(pose_pub_unity_topic, PoseArray, queue_size=10)
+        self.end_pub = rospy.Publisher(end_pub_topic, Bool, queue_size=1)
 
         self.probe_path = probe_path
         self.probe_to_ee = self.compute.get_coordinate(project_path + probe_path)
@@ -685,7 +687,7 @@ class ControlPanel(object):
             if np.sum(np.abs(self.robot_pose_7d[:3] - desired_pose_quat[:3])) > 0.1:
                 return
             
-            # self.set_impedance_control(enable=True, is_impedance=True)
+            self.set_impedance_control(enable=True, is_impedance=True)
             self.is_segmented = True
             self.movement(self.points_quat)
         
@@ -740,6 +742,7 @@ class ControlPanel(object):
             plt.show()
         
         elif value == 'reset':
+            self.set_impedance_control(enable=True, is_impedance=False)
             self.end_scanning()
         
         elif value == 'generate':
@@ -785,12 +788,15 @@ class ControlPanel(object):
         self.is_motion_start = True
                 
     def end_scanning(self):
-        self.set_impedance_control(enable=True, is_impedance=False)
+        end = Bool()
+        end.data = True
+        self.end_pub.publish(end)
+        # self.set_impedance_control(enable=True, is_impedance=False)
         self.desired_pose_mouse_quat = self.init_pose
         self.move_to_cartesian_pose(self.init_pose)
 
     def is_probe_pose_closed(self, point_q):
-        return np.sum(np.abs(self.get_probe_to_base_quat() - point_q)) < 0.018
+        return np.sum(np.abs(self.get_probe_to_base_quat() - point_q)) < 0.02
     
     def get_probe_to_base_quat(self):
         start_mat = self.tf.quat_to_matrix(self.robot_pose_7d)
