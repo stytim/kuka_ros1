@@ -25,7 +25,7 @@ def main():
     image_pub = rospy.Publisher('/us_image/compressed', CompressedImage, queue_size=1)
     bridge = CvBridge()
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(6)
 
     if not cap.isOpened():
         rospy.logerr("Cannot open image stream")
