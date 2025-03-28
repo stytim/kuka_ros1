@@ -1,0 +1,10 @@
+frame_cropped_coordinates:
+  x0: 567
+  x1: 1352
+  y0: 182
+  y1: 880
+frame_size:
+  height: 1200
+  width: 1920
+video_index: 0
+hz: 10

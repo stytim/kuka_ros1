@@ -450,7 +450,9 @@ class ControlPanel(object):
                  iiwa_lin_pub_topic='/iiwa/command/CartesianPoseLin',
                  rob_command_topic='/robot_command',
                  pose_pub_unity_topic='/points_pose_array',
-                 end_pub_topic='/robot/end'
+                 end_pub_topic='/robot/end',
+                 max_rob_x=0.77,
+                 lowest_rob_z=0.02
                  ):
         super(ControlPanel, self).__init__()
         rospy.init_node('iiwa_realsense_node', anonymous=True)
@@ -459,6 +461,9 @@ class ControlPanel(object):
         self.tf = Transform()
         self.alg = Algorithm()
         self.compute = Compute()
+
+        self.max_rob_x = max_rob_x
+        self.lowest_rob_z = lowest_rob_z
 
         # UI
         self.ui = CommandUI()
@@ -481,7 +486,7 @@ class ControlPanel(object):
         self.robot_pose = None
         self.robot_pose_7d = []
         self.points_quat_unity = []
-        self.init_pose = np.array([0.5, 0.0, 0.6, 0.7071068, 0.7071068, 0.0, 0.0])
+        self.init_pose = np.array([0.5, 0.0, 0.45, 0.7071068, 0.7071068, 0.0, 0.0])
 
         self.ui.generate_button.clicked.connect(self.generate_path)
         self.ui.select_button.clicked.connect(self.select_point)
@@ -632,7 +637,7 @@ class ControlPanel(object):
         else:
             self.points_running_queue.popleft()
     
-    def set_impedance_control(self, enable=False, is_impedance=False, stiffness_z=800, weight=1.5):
+    def set_impedance_control(self, enable=False, is_impedance=False, stiffness_z=800):
         if not enable:
             return
         rospy.wait_for_service(self.control_service)
@@ -652,7 +657,7 @@ class ControlPanel(object):
 
                 request.cartesian_impedance.cartesian_damping.x = 0.8
                 request.cartesian_impedance.cartesian_damping.y = 0.8
-                request.cartesian_impedance.cartesian_damping.z = 0.88
+                request.cartesian_impedance.cartesian_damping.z = 0.9
                 request.cartesian_impedance.cartesian_damping.a = 0.8
                 request.cartesian_impedance.cartesian_damping.b = 0.8
                 request.cartesian_impedance.cartesian_damping.c = 0.8
@@ -739,11 +744,18 @@ class ControlPanel(object):
             ax.imshow(img)
             self.points_selection = []
             cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
+            # pose_quat = self.robot_pose_7d
+            # pose_mat = self.tf.quat_to_matrix(pose_quat)
+            # probe_to_base = np.dot(pose_mat, self.probe_to_ee)
+            # pose_tmp = self.tf.matrix_to_quat(probe_to_base)
+            # np.savetxt('/home/narvis/pose/pose.txt', pose_tmp, fmt='%.6f')
             plt.show()
         
         elif value == 'reset':
             self.set_impedance_control(enable=True, is_impedance=False)
-            self.end_scanning()
+            # self.end_scanning()
+            self.desired_pose_mouse_quat = self.init_pose
+            self.move_to_cartesian_pose(self.init_pose)
         
         elif value == 'generate':
             self.points_quat = []
@@ -771,6 +783,9 @@ class ControlPanel(object):
             if len(point_to_world) == 0:
                 continue
             point_to_world_quat = self.tf.matrix_to_quat(point_to_world)
+            x, y, z = point_to_world_quat[:3]
+            if x > self.max_rob_x or z < self.lowest_rob_z:
+                return
             point_to_world_publish_quat = self.tf.matrix_to_quat(point_to_world_publish)
             self.points_quat.append(point_to_world_quat)
             self.points_quat_unity.append(point_to_world_publish_quat)
@@ -796,7 +811,7 @@ class ControlPanel(object):
         self.move_to_cartesian_pose(self.init_pose)
 
     def is_probe_pose_closed(self, point_q):
-        return np.sum(np.abs(self.get_probe_to_base_quat() - point_q)) < 0.02
+        return np.sum(np.abs(self.get_probe_to_base_quat() - point_q)) < 0.025
     
     def get_probe_to_base_quat(self):
         start_mat = self.tf.quat_to_matrix(self.robot_pose_7d)
@@ -819,7 +834,7 @@ class ControlPanel(object):
         point_to_world[:3, :3] = point_rot
         return point_to_world
         
-    def single_point_calculation(self, point2d, is_published=False, max_rot_angle=20):
+    def single_point_calculation(self, point2d, is_published=False, max_rot_angle=10):
         point3d = []
         point_rot = []
         point3d_cam = self.alg.pixel_to_point(point2d, self.depth_queue)
@@ -841,11 +856,21 @@ class ControlPanel(object):
         if not is_succeed:
             return point3d, point_rot
         angle = euler.mat2euler(point_rot_t)
+        angle_deg = np.rad2deg(angle)
+        print(f'angle_deg: {angle_deg}')
+        angle_limited = []
+        for deg in angle_deg:
+            if deg > 0:
+                deg = max_rot_angle if deg > max_rot_angle else deg
+            else:
+                deg = -max_rot_angle if deg < -max_rot_angle else deg
+            angle_limited.append(deg)
+        angle = np.deg2rad(angle_limited)
+        print(f'angle_limited: {angle_limited}')
         point_rot_t = euler.euler2mat(angle[1], angle[0], angle[2])
         point_rot = point_rot_t @ ee_to_base[:3, :3] 
 
-        point_rot_angle = np.rad2deg(euler.mat2euler(point_rot_t))
-        point_rot_angle[point_rot_angle > max_rot_angle] = max_rot_angle
+        # point_rot_angle = np.rad2deg(euler.mat2euler(point_rot))
 
         return point3d, point_rot
         
