@@ -1,0 +1,42 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/leofer/ros_projects/freehand/devel/include/**",
+        "/home/leofer/ros_projects/franka_ws/devel/include/**",
+        "/home/leofer/ros_projects/realsense/devel/include/**",
+        "/home/leofer/ros_projects/robot_arm/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/leofer/ros_projects/realsense/src/ddynamic_reconfigure/include/**",
+        "/home/leofer/ros_projects/franka_ws/src/franka_ros/franka_control/include/**",
+        "/home/leofer/ros_projects/franka_ws/src/franka_ros/franka_example_controllers/include/**",
+        "/home/leofer/ros_projects/franka_ws/src/franka_freehand/include/**",
+        "/home/leofer/ros_projects/franka_ws/src/franka_ros/franka_gazebo/include/**",
+        "/home/leofer/ros_projects/franka_ws/src/franka_ros/franka_gripper/include/**",
+        "/home/leofer/ros_projects/franka_ws/src/franka_handeye_cali/include/**",
+        "/home/leofer/ros_projects/franka_ws/src/franka_ros/franka_hw/include/**",
+        "/home/leofer/ros_projects/franka_ws/src/franka_test/include/**",
+        "/home/leofer/ros_projects/freehand/src/freehand/include/**",
+        "/home/leofer/ros_projects/robot_arm/src/iiwa_stack/iiwa_hw/include/**",
+        "/home/leofer/ros_projects/robot_arm/src/iiwa_stack/iiwa_ros/include/**",
+        "/home/leofer/ros_projects/llm_robus/src/llm_robus/include/**",
+        "/home/leofer/ros_projects/robot_arm/src/ROS_VisionControl/src/include/**",
+        "/home/leofer/ros_projects/freehand/src/ranging/include/**",
+        "/home/leofer/ros_projects/realsense/src/realsense-ros/realsense2_camera/include/**",
+        "/home/leofer/codes/tools/ros/src/synchronous_extractor/include/**",
+        "/home/leofer/ros_projects/freehand/src/us_dev_screen_capture/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

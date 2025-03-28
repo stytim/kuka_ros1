@@ -1,0 +1,20 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/leofer/ros_projects/ros_tcp_endpoint/devel/lib/python3/dist-packages",
+        "/home/leofer/ros_projects/llm_robus/devel/lib/python3/dist-packages",
+        "/home/leofer/ros_projects/freehand/devel/lib/python3/dist-packages",
+        "/home/leofer/ros_projects/franka_ws/devel/lib/python3/dist-packages",
+        "/home/leofer/ros_projects/realsense/devel/lib/python3/dist-packages",
+        "/home/leofer/ros_projects/robot_arm/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/leofer/ros_projects/ros_tcp_endpoint/devel/lib/python3/dist-packages",
+        "/home/leofer/ros_projects/llm_robus/devel/lib/python3/dist-packages",
+        "/home/leofer/ros_projects/freehand/devel/lib/python3/dist-packages",
+        "/home/leofer/ros_projects/franka_ws/devel/lib/python3/dist-packages",
+        "/home/leofer/ros_projects/realsense/devel/lib/python3/dist-packages",
+        "/home/leofer/ros_projects/robot_arm/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ]
+}
