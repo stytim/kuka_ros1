@@ -1,0 +1,8 @@
+<?xml version="1.0" ?>
+<launch>
+    <!-- Control panel node -->
+    <node name="robot_motion_node" pkg="iiwa_pose_control" type="robot_motion.py" output="screen" required="true" />
+
+    <!-- <node name="command_node" pkg="iiwa_pose_control" type="command.py" output="screen" required="true" />       -->
+    
+</launch>
