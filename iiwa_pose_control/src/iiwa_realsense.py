@@ -3,7 +3,7 @@
 '''
 @File    :   control_panel.py
 @Time    :   2025/01/13 20:50:58
-@Author  :   Feng Li 
+@Author  :   Feng Li  
 @Contact :   feng.li@tum.de
 @Desc    :   
 '''
