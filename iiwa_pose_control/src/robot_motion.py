@@ -333,12 +333,16 @@ class ControlPanel(object):
     def execute_command(self, value):
         if value == 'start':
             if len(self.generated_points) == 0:
+                QMessageBox.about(self.vis, 'Warning', 'Please generate the path points first! ')
                 return
             
             self.set_impedance_control(enable=True, is_impedance=True)
             self.movement(self.generated_points)
 
         elif value == 'stop':
+            if len(self.generated_points) == 0:
+                QMessageBox.about(self.vis, 'Warning', 'Please generate the path points first! ')
+                return
             current_probe_pose = self.robot_pose_7d.copy()
             current_probe_pose[2] += 0.01
             self.move_to_cartesian_pose(current_probe_pose)
