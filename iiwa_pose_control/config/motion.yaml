@@ -1,0 +1,10 @@
+delta_tx_s: 0.015
+delta_tx_e: 0.03
+delta_ty_s: 0.01
+delta_ty_e: 0.01
+delta_tz_s: 0.1
+delta_tz_e: 0.1
+
+delta_ry_s: 100
+delta_ry_e: 300 
+delta_rz: 10
