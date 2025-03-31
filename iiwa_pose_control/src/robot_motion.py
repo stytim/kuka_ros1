@@ -247,11 +247,13 @@ class ControlPanel(object):
             self.ui.pause.setStyleSheet("background-color: #3CB371")
     
     def handle_stop(self):
-        self.set_impedance_control(enable=False)
-        current_probe_pose = self.robot_pose_7d.copy()
-        current_probe_pose[2] += 0.01
-        self.move_to_cartesian_pose(current_probe_pose)
-        self.is_robot_stopped = True
+        # self.set_impedance_control(enable=False)
+        # current_probe_pose = self.robot_pose_7d.copy()
+        # current_probe_pose[2] += 0.01
+        # self.move_to_cartesian_pose(current_probe_pose)
+        # self.is_robot_stopped = True
+
+        self.execute_command('stop')
     
     def handle_reset(self):
         self.init_parameters()
@@ -338,7 +340,7 @@ class ControlPanel(object):
 
         elif value == 'stop':
             current_probe_pose = self.robot_pose_7d.copy()
-            current_probe_pose[2] += 0.02
+            current_probe_pose[2] += 0.01
             self.move_to_cartesian_pose(current_probe_pose)
             self.desired_pose_mouse_quat = self.robot_pose_7d
             self.is_robot_stopped = True
