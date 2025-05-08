@@ -607,7 +607,7 @@ class ControlPanel(object):
         self.command_str = ros_msg.data
         self.automated_command = True
 
-    def destination_reached_callback(self,msg):
+    def destination_reached_callback(self, msg):
         self.destination_reached = True
 
     def onclick(self, event):
@@ -683,7 +683,7 @@ class ControlPanel(object):
         if value == 'start':
             if len(self.points_quat) == 0:
                 return
-            self.move_probe_to_point(self.points_quat[0], startend=True)
+            self.move_probe_to_point(self.points_quat[0], start_end=True)
 
         elif value == 'trajectory':
             point_to_world = self.tf.quat_to_matrix(self.points_quat[0])
@@ -874,7 +874,7 @@ class ControlPanel(object):
 
         return point3d, point_rot
         
-    def move_probe_to_point(self, point_to_world_quat, startend = False):
+    def move_probe_to_point(self, point_to_world_quat, start_end=False):
         point_to_world = self.tf.quat_to_matrix(point_to_world_quat)
         desired_pose = point_to_world @ np.linalg.inv(self.probe_to_ee)
         
@@ -882,7 +882,7 @@ class ControlPanel(object):
         desired_pose_show = np.round(desired_pose_show, decimals=2)
         transform_quat = self.tf.matrix_to_quat(desired_pose)
 
-        self.move_to_cartesian_pose(transform_quat, startend)
+        self.move_to_cartesian_pose(transform_quat, start_end)
     
     #### ros function
     def rob_callback(self, ros_msg):
@@ -904,7 +904,7 @@ class ControlPanel(object):
         self.depth_img = depth_img
         self.depth_queue.append(depth_img)
     
-    def move_to_cartesian_pose(self, desired_pose, startend = False):
+    def move_to_cartesian_pose(self, desired_pose, start_end=False):
         posemsg = PoseStamped()
         posemsg.header.frame_id = "iiwa_link_0"
 
@@ -918,13 +918,20 @@ class ControlPanel(object):
 
         self.destination_reached = False
         self.iiwa_lin_pose_pub.publish(posemsg)
-        if startend:
+        if start_end:
             rospy.loginfo("Moving to pose.")
+            print(self.destination_reached)
             while not self.destination_reached:
-                rospy.sleep(0.5)
+                self.well_sleep(0.2)
             rospy.loginfo("Reached start point, continue scan.")
             self.execute_command("trajectory")
-
+    
+    def well_sleep(self, second, segments=10):
+        QApplication.processEvents()
+        length = int(segments * second)
+        for i in range(length):
+            QApplication.processEvents()
+            time.sleep(1/segments)
      
     def init_parameters(self):
         self.points_selection = []
